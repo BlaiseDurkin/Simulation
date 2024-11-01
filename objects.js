@@ -840,7 +840,7 @@ class GameBoardGrid{
         this.n = n //n x n grid
         this.dx = W/n
         this.dy = H/n
-        this.grid = [] // <---- stupid var for doing stupid line grid drawing (((retarded)))
+        this.grid = [] // <---- stupid var for doing stupid line grid drawing ((()))
         this.points = [] //land points. len =  (n+1)^2
         this.max_p_i
         //this.triangles = []
@@ -1475,7 +1475,7 @@ class Animal{
         //if no food -> search(food)
     }
     sex(){
-        //find opposite gender if not retarded
+        //find opposite gender
         //target = same type animal AND opposite gender
 
         //if success
