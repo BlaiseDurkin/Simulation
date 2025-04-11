@@ -1361,7 +1361,7 @@ class Animal{
         this.next_destination = this.gb.position
 
         this.target = null //pointer to target object
-        this.target_val = 0 // 1 = sex/food, -1 = death
+        this.target_val = 0 // 1 = if in {sex,food}, -1 = death
         this.d_2_target = null
         if (this.target == null){
             this.d_2_target = 100000
@@ -1375,7 +1375,7 @@ class Animal{
         this.inShelter = 0 // 1 = True
         this.constraint = 0 // measured as mass
         this.constrainer = null
-        this.weapon = null // cat, tiger, wolf, bear  :=> bone_knifes(5),... ram, elk :=> bone_hammer,... eagle :=> bone_knives(3)
+        this.weapon = null // cat, tiger, wolf, bear, eagle  :=> bone_knifes(size, mass),... ram, elk :=> bone_hammer(mass),... 
         //claws & teeth =~= bone_knives
         //quantify weapon?
         //      number of weapons * size
@@ -1814,10 +1814,15 @@ class Animal{
 
     }
     sex(){
+        
         //find opposite gender
         //target = same type animal AND opposite gender
-
+        // if target exists
+        //requirements are low fear of other & self
+        //if fear high -> talk() *note* talk() =/= speak()
+        // talk() { create senteces given context of situation }
         //if success
+        
         //happy increase
         //energy decrease
         // chance of offspring
