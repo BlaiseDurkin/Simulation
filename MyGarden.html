@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>garden</title>
+    <script src="tool_ui.js"></script>
+
+    <script src="dataviz.js"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.5.0/chart.min.js"></script>-->
+    <script src="data.js"></script>
+    <script src="testAlgorithm.js"></script>
+    <style>
+        :root{
+            --navy-color: rgba(23,26,39,1);
+            --pastel-blue: rgba(59,113,146,1);
+            --light-blue: rgba(194,237,251,1);
+
+            --mc1: var(--navy-color);
+            --mc2: var(--pastel-blue);
+            --mc3: var(--light-blue);
+            --mc4: gray;
+        }
+         * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body, html {
+          height: 100vh;
+          width: 100%;
+          font-family: sans-serif;
+          color: red;
+        }
+        .top-bar{
+          height: 10vh;
+          background-color: var(--mc1);
+          color: var(--mc3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+        }
+        .bottom-bar {
+          height: 28vh;
+          background-color: var(--mc1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+        }
+
+        .middle-bar {
+          height: 62vh;
+          width: 100%;
+          background-color: var(--mc1);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .middle-inner {
+          width: 100%;
+          max-width: 99%;
+          height: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: stretch;
+          position: relative;
+        }
+
+        /* Divide into 3 parts */
+        .left-column{
+            flex: 1;
+            background-color: #c1d9cd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            height: 100%;
+            overflow-y: scroll;
+
+        }
+        .right-column {
+          flex: 1;
+          background-color: #c1d9cd;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+
+        }
+
+
+        .center-column {
+          width: 59%;
+          background-color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .col-card{
+            width: 95%;
+            height: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: white;
+        }
+        #geo-inputs{
+            height: 10vh;
+            margin: 1vh;
+            display: inline-block;
+            font-size: 10px;
+        }
+        #geo-inputs div{
+            display: inline-block;
+            border: 1px solid green;
+            margin-right: 10px;
+        }
+        h2, h4, p, input{
+            margin: 0vh;
+            padding: 0vh;
+
+        }
+        #myChart{
+            border: 1px solid red;
+            box-shadow: 0px -5px 10px var(--mc3);
+            width: 100%;
+        }
+        #Garden{
+            border: 1px solid red;
+            box-shadow: 0px 0px 11px var(--mc1);
+            border-radius: 5%;
+            width: 100%;
+            //text-align: center;
+        }
+        .can-wrapper{
+            display: inline-block;
+            width: 97%;
+        }
+        .side{
+            width: 20%;
+        }
+
+        .dropdown-check-list {
+          display: inline-block;
+          vertical-align: super;
+        }
+
+        .dropdown-check-list .anchor {
+          position: relative;
+          cursor: pointer;
+          display: inline-block;
+          padding: 5px 50px 5px 10px;
+          border: 1px solid #ccc;
+        }
+
+        .dropdown-check-list .anchor:after {
+          position: absolute;
+          content: "";
+          border-left: 2px solid black;
+          border-top: 2px solid black;
+          padding: 5px;
+          right: 10px;
+          top: 20%;
+          -moz-transform: rotate(-135deg);
+          -ms-transform: rotate(-135deg);
+          -o-transform: rotate(-135deg);
+          -webkit-transform: rotate(-135deg);
+          transform: rotate(-135deg);
+        }
+        .dropdown-check-list .anchor:active:after {
+          right: 8px;
+          top: 21%;
+        }
+
+        .dropdown-check-list ul.items {
+          padding: 2px;
+          display: none;
+          margin: 0;
+          border: 1px solid #ccc;
+          border-top: none;
+        }
+
+        ul{
+            list-style-type:none;
+        }
+        .dropdown-check-list ul.items li {
+          list-style: none;
+
+        }
+
+        .dropdown-check-list.visible .anchor {
+          color: #0094ff;
+        }
+
+        .dropdown-check-list.visible .items {
+          display: block;
+        }
+        #makeB{
+            background: green;
+            color: white;
+            border: 0;
+            border-radius: 19%;
+            padding: 2vh;
+            margin: 3vh;
+        }
+        .hiddenCard{
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            z-index: 2;
+            //background: rgba(100,255,10,0.85);
+            visibility: hidden;
+            display: flex;
+            //gap: 30px;
+            align-items: center;
+            justify-content: center;
+            border: 1px dotted red;
+        }
+        #plant-choices{
+            background: rgba(100,255,10,0.85);
+        }
+        #anal-container{
+            background: rgba(10,100,255,0.85);
+            text-shadow: 0px 0px 4px var(--mc3);
+            color: var(--mc3);
+        }
+        #anal-container h2, #anal-container h3, #anal-container h4{
+            margin: 1vh;
+            letter-spacing: 2px;
+        }
+        #anal-container h2{
+            text-align: center;
+        }
+        #anal-container hr{
+            margin: 3vh;
+        }
+        #anal-card{
+            width: 60%;
+            margin-left: auto;
+            margin-right: auto;
+            border: 2px solid var(--mc3);
+            border-top: none;
+            border-bottom: none;
+            border-radius: 10%;
+            padding: 10vh;
+        }
+        #anal-container button{
+            color: var(--mc3);
+            padding: 1vh;
+            padding-left: 3vh;
+            padding-right: 3vh;
+            border: 2px solid var(--mc3);
+
+            border-radius: 33%;
+            background: rgba(0,0,0,0.1);
+        }
+        #anal-container button:hover{
+            background: rgba(0,0,0,0.2);
+            border-top: 2px solid rgba(0,0,0,0);
+            border-bottom: 2px solid rgba(0,0,0,0);
+        }
+        #anal-container .slider-container{
+            width: 60%;
+            padding: 1vh;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .card{
+
+            margin-left: auto;
+            //margin-right: auto;
+            //flex: 1;
+            background-color: #c1d9cd;
+            //display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30%;
+            border: 1px solid red;
+        }
+
+        .plant-card h4{
+            margin-top: 10px;
+            color: red;
+
+        }
+        .plant-card hr{
+            margin: 2px;
+        }
+
+        #plant-counter-container{
+          background-color: #c1d9cd;
+          align-items: center;
+          justify-content: center;
+          width: 45%;
+
+        }
+        #plant-yields{
+            max-height: 12vh;
+            overflow-y: scroll;
+        }
+
+
+
+    </style>
+</head>
+<body>
+<!--
+    TODO
+    - change plant list to floating card -- hidden
+    - user input: {foodforest, survival(carb heavy), aesthetic, veg}
+    -   - calculate min calories for survival. therefore need user data {# of people, size, age}
+
+    User Interaction
+    1) objective : 1 of 4
+    2) climate: pick location on map vs input temp & rain
+    3) select all plants
+    4) garden size (assume it is square. in future let user draw polygon shape of garden with height map, etc...)
+
+    TODO !!! if (garden size > 50) THEN scale up bed & alley sizes by factor = a*sqrt(W*H)
+
+    -> put default date if date is missing, defualt_hottest_date = 7/20
+
+    -> fix m
+
+    !! if 5 or less plants remaining -> program crashes
+    6 remaining plants is limit
+
+-->
+<div class="hiddenCard" id="anal-container" style="visibility:visible;">
+    <div id="anal-card">
+        <button onclick="closeAnalCard()"> X </button>
+        <h2>Garden Analysis</h2>
+        <hr/>
+        <h3>Total Garden Yield</h3>
+        <div id="plant-yields">
+            <p>Plant 1: 10 LBs</p>
+            <p>Plant 2: 10 LBS</p>
+            <p>Plant 3: 10 LBS</p>
+            <p>Plant 4: 10 LBS</p>
+            <p>Plant 5: 10 LBS</p>
+            <p>Plant 6: 10 LBS</p>
+            <p>Plant 7: 10 LBS</p>
+            <p>Plant 8: 10 LBS</p>
+            <p>Plant 9: 10 LBS</p>
+            <p>Plant 0: 10 LBS</p>
+            <p>Plant 1: 10 LBS</p>
+            <p>Plant 3: 10 LBS</p>
+            <p>Plant 4: 10 LBS</p>
+            <p>Plant 5: 10 LBS</p>
+        </div>
+
+
+        <hr/>
+        <h3>Number of People that can Survive per Year</h3>
+        <p><span id="max-capacity">1.5</span> People (Average 150 LB Individual)</p>
+        <hr/>
+        <h3>Total Water Consumption</h3>
+        <p><span id="water-consumption">420</span> Gallons per Year</p>
+        <div class="slider-container">
+            <h4>Rain Factor</h4>
+            Rain Forest <input type="range" min="1" max="100" value="90" class="slider" id="rainSlider"> Desert
+        </div>
+        <!--
+        <p>*Remember to mulch your plant beds in order to conserve water and improve soil health.</p>
+        -->
+
+    </div>
+
+</div>
+
+<div class="hiddenCard" id="plant-choices" >
+    <div><!-- pie chart --></div>
+    <div id="list1" class="card" tabindex="100">
+      <h2>Select Plants</h2>
+      <ul class="items">
+          <!--
+            TODO: check how many plants are selected and restrict user from selecting too many plants
+            'Limit = N, if you would like to select more than free limit... redirect user to permaculture consulting
+          -->
+
+        <li><input type="checkbox" />Tomato</li>
+        <li><input type="checkbox" />Bell Pepper</li>
+        <li><input type="checkbox" />Egg Plant</li> <hr/>
+
+        <li><input type="checkbox" />Onion</li>
+        <li><input type="checkbox" />Garlic</li><hr/>
+
+        <li><input type="checkbox" />Carrot</li>
+        <li><input type="checkbox" />Potato</li>
+        <li><input type="checkbox" />Corn</li>
+        <li><input type="checkbox" />Sweet Potato</li><hr/>
+
+        <li><input type="checkbox" />Zucchini</li>
+        <li><input type="checkbox" />Cucumber</li>
+        <li><input type="checkbox" />Squash</li><hr/>
+
+        <li><input type="checkbox" />Broccoli</li>
+        <li><input type="checkbox" />Kale</li>
+        <li><input type="checkbox" />Cabbage</li><hr/>
+
+        <li><input type="checkbox" />Lettuce</li>
+        <li><input type="checkbox" />Mint</li>
+        <li><input type="checkbox" />Oregano</li>
+        <li><input type="checkbox" />Basil</li>
+        <li><input type="checkbox" />Parsley</li>
+        <li><input type="checkbox" />Thyme</li>
+
+        <li><input type="checkbox" />Marigold</li>
+
+        <li><input type="checkbox" />Lemon Grass</li>
+        <li><input type="checkbox" />Peas</li>
+        <li><input type="checkbox" />Green Beans</li>
+        <li><input type="checkbox" />Beetroot</li>
+        <li><input type="checkbox" />Spinach</li>
+        <li><input type="checkbox" />Rhubarb</li>
+        <li><input type="checkbox" />Chard</li>
+
+
+      </ul>
+        <div><!-- barcharts --></div>
+
+
+    </div>
+    <div id="plant-counter-container">
+        <p>Plants Selected: <span id="plant-counter">0 </span>. <span id="plant-counter-error"></span></p>
+
+        <button id="makeB" onclick="loadPlants()" >Enter</button>
+
+        <br/>
+        <hr/>
+        <p>You are limited to 15 plants in the free version. To access more <a href="">click here...</a></p>
+
+
+    </div>
+    <script>
+        let checkedCount = 0;
+        const countDisplay = document.getElementById('plant-counter');
+
+        const list = document.getElementById('checkbox-list');
+        const plantCountError = document.getElementById('plant-counter-error');
+        const checkboxes = document.querySelectorAll('#list1 li input[type="checkbox"]')
+
+        checkboxes.forEach(checkbox => {
+          checkbox.addEventListener('change', () => {
+            // Recalculate the checked count
+            checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            countDisplay.textContent = checkedCount;
+            if (checkedCount > 15){
+                plantCountError.textContent = "You have exceeded the limit. Please deselect some plants."
+            }
+            else{
+                plantCountError.textContent = ""
+
+            }
+          });
+        });
+
+    </script>
+</div>
+
+
+
+<div id="start-data-card">
+
+</div>
+
+
+
+<!--
+
+-->
+
+
+
+<div class="top-bar"><h1>Permaculture Garden Planner</h1></div>
+
+  <div class="middle-bar">
+    <div class="middle-inner">
+
+      <div class="left-column">
+          <div class="col-card">
+              <div id="garden-details">
+                <h4>Hover Over Beds</h4>
+              </div>
+          </div>
+
+      </div>
+      <div class="center-column">
+           <div class="can-wrapper">
+                <canvas id="Garden"></canvas>
+                <!--<script src="drawGarden.js"></script>-->
+               <script src="testDrawing.js"></script>
+            </div>
+
+      </div>
+      <div class="right-column">
+
+          <div class="col-card">
+
+            <div id="geo-inputs">
+                <h2>Location Inputs</h2>
+                <div>
+                    <h4>Temperature (Fahrenheit)</h4>
+                    <p>Ave. Max Temp</p>
+                    <input type="text" id="max-temp" name="max-temp" value=""><br>
+                    <p>Ave. Min Temp</p>
+                    <input type="text" id="min-temp" name="min-temp" value=""><br>
+                    <p>Hottest Day</p>
+                    <input type="date" id="hot-day"><br>
+                </div>
+                <div style="margin-top: 2px;">
+                    <h4>Size of Garden (Feet)</h4>
+                    <span>Width </span><input type="text" id="garden-width" name="garden-width" value=""><br>
+                    <span>Height </span><input type="text" id="garden-height" name="garden-height" value=""><br>
+
+
+                </div>
+
+                <!--
+                <div>
+                     <h4>Rain</h4>
+                    <p>Ave. Yearly Rainp</p>
+                    <input type="text" id="total-rain" name="total-rain" value=""><br>
+                    <p>First Rain</p>
+                    <input type="date" id="first-rain"><br>
+                    <p>Last Rain</p>
+                    <input type="date" id="last-rain"><br>
+                </div>
+                -->
+
+
+                <button onclick="showPlants()" style="background:yellowgreen;">Select Plants</button> <br/>
+                <div class="slider-container">
+                    <p>Intercropping</p>
+                    <input type="range" min="1" max="100" value="50" class="slider" id="interCropVal">
+                </div>
+                <div class="slider-container">
+                    <p>Survival Preparedness</p>
+                    <input type="range" min="1" max="100" value="50" class="slider" id="survivalVal">
+                </div> <br/>
+                 <button onclick="geoInput()" style="background:orange;">Start Garden</button>
+                <!--
+                Garden Analysis
+                 - expected yeild for each plant type
+                        total_pounds = pounds_per_plant * num_plants
+
+                 - number of people that can survive: num_people/year (2500 * 365)
+                        total_calories = sum_over_plant_type( calories_per_pound * total_pounds)
+                        num_people_per_year = total_calories / calories_needed_per_year
+
+
+                 - expected water consumption (not factoring in rain)
+                        total_water = sum_over_plant_type( water_per_plant * num_plants)
+                            -> factor in rain
+                                -> slider (desert - rainforest) -> total_water = r * total_water,
+                                    r = { 1 if desert, 0 if rainforest}
+                 - medicinal benifits (flowers & herbs)
+
+                -->
+                <br/>
+                <button id="anal-button" onclick="analyzeGarden()" style="visibility:visible; background: lightblue;"> Analyze Garden</button>
+
+
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+   <div >
+    <canvas id="myChart" ></canvas>
+    <!--<script src="makechart.js"></script>-->
+
+    </div>
+  </div>
+<script>
+//load chart with sept as hottest day
+makeTimeChart(246, 1, 103)
+
+</script>
+</body>
+</html>
