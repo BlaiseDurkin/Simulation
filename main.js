@@ -108,7 +108,8 @@ async function testHeavenMouse(gb){
     //var AnimalData = await loadAnimalData()
     //var FoodData = await loadFoodData()
     gb.animal_data = AnimalData
-    ptn = new Point(300, 300)
+    ptn1 = new Point(300, 300)
+    ptn2 = new Point(700, 300)
     // 1 mouse
     let x = Math.random()
     let gender = "M"
@@ -118,10 +119,16 @@ async function testHeavenMouse(gb){
     //console.log(AnimalData["cow"]["diet"])
     //console.log('mouse:',AnimalData["mouse"])
     console.log('making mouse')
-    tmouse = new Animal('mouse', AnimalData['mouse']['type'], ptn, AnimalData['mouse']['size'], AnimalData['mouse']['weight'], gb, gender)
+    tmouse = new Animal('mouse', AnimalData['mouse']['type'], ptn1, AnimalData['mouse']['size'], AnimalData['mouse']['weight'], gb, gender, true)
     tmouse.draw()
     //gb.point2Tile(tmouse.position)
     gb.tiles[gb.point2Tile(tmouse.position)].objects.push(tmouse)
+
+
+
+    tcat = new Animal('cat', AnimalData['cat']['type'], ptn2, AnimalData['cat']['size'], AnimalData['cat']['weight'], gb, gender, false)
+    tcat.draw()
+    gb.tiles[gb.point2Tile(tcat.position)].objects.push(tcat)
     /*
     for(var t = 0; t< gb.tiles.length; t++){
         if(gb.tiles[t].objects.length != 0){
@@ -232,7 +239,7 @@ function animateGame(){
     //update_Environment()
     //update_UI()
     requestAnimationFrame(animateGame)
-    //clearCanvas()
+    clearCanvas()
     TIME += 1 //global time
     t += 1 //local time 48 itteration cycle
     html_element = document.getElementById('day_count')
@@ -255,6 +262,11 @@ function animateGame(){
         //console.log(t)
         //console.log(gb.tiles[t])
         for(var i = 0; i< gb.tiles[g].objects.length; i++){
+            //todo: if health < -100 --> remove object
+            if (gb.tiles[g].objects[i].health < -100){
+                gb.tiles[g].objects.splice(i,1)
+                continue
+            }
             gb.tiles[g].objects[i].update()
             gb.tiles[g].objects[i].draw()
         }

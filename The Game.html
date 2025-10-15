@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Game</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body{
+            overflow: hidden;
+            width: 100%;
+            height: 100vh;
+            background: black;
+            //background: linear-gradient(to bottom, rgba(200, 200, 200, 1), rgba(150, 120, 140, 1), rgba(111, 101, 101, 1));
+            font-family: 'Roboto', sans-serif;
+            color: white;
+        }
+        .top-nav{
+            width: 100%;
+            height: 4vh;
+            text-align: center;
+        }
+        .CanvasWrapper{
+            width: 80%;
+            //width: 75%;
+            margin-left: auto;
+            margin-right: auto;
+            //border: 1px solid white;
+            //border-bottom: 1px solid black;
+            height: 75vh;
+            //height: 60vh;
+        }
+        #Board{
+            height: 100%;
+            width: 100%;
+            border: 1px solid blue;
+            background: rgba(100,200,10,1);
+
+        }
+        #left-nav{
+            left: 0;
+            top: 10vh;
+            float: left;
+            position: fixed;
+            color: white;
+        }
+        #right-nav{
+            right: 0;
+            top: 10vh;
+            float: right;
+            position: fixed;
+            width: 13%;
+            background: rgba(0,0,0,0.5);
+        }
+        .side-nav{
+            width: 100%;
+            padding: 10px;
+            border: 1px solid red;
+        }
+        .side-nav button{
+            width: 100%;
+        }
+        .pop-window{
+            color: black;
+            //background: blue;
+            text-align: center;
+             width: 100%;
+            height: 100vh;
+            position: fixed;
+            z-index: 2;
+            background: rgba(255,150,0,0.7);
+            padding: 14vh;
+            visibility: hidden;
+        }
+    </style>
+    <script src="../../node_modules/mathjs/lib/browser/math.js"></script>
+
+
+    <script src="vars.js"></script>
+    <script src="ui.js"></script>
+    <script src="functions.js"></script>
+    <script src="mathstats.js"></script>
+    <script src="drawing.js"></script>
+    <script src="objects.js"></script>
+</head>
+<body>
+    <div class="top-nav">
+        <nav>
+            <button onclick="alert()">Pause</button>
+            <button>Help</button>
+        </nav>
+    </div>
+    <div class="pop-window" id="start-input">
+        <h1>Start Game</h1>
+        <h2>Enter the location, epoch, and civilization infrastructure at spawn</h2>
+        <p>Location</p>
+        <input list="locations" name="browser" id="startlocation">
+          <datalist id="locations">
+            <option value="England">
+            <option value="Italy">
+            <option value="Greece">
+            <option value="Levant">
+            <option value="North Africa">
+            <option value="England">
+            <option value="Italy">
+            <option value="Greece">
+            <option value="Levant">
+            <option value="Levant">
+
+          </datalist>
+        <p>Epoch</p>
+        <input list="epochs" name="browser" id="epoch">
+          <datalist id="epochs">
+            <option value="Antiquity">
+            <option value="Medieval">
+            <option value="Exploration">
+            <option value="Wild West">
+
+          </datalist>
+        <p>Civilization Level</p>
+        <input list="civlevels" name="browser" id="civlevel">
+          <datalist id="civlevels">
+            <option value="Desolate">
+            <option value="Village">
+            <option value="Town">
+            <option value="City">
+
+          </datalist>
+
+        <p>Start Game</p>
+        <button onclick="closePop()">Enter</button>
+    </div>
+    <div class="CanvasWrapper">
+        <canvas id="Board"></canvas>
+    </div>
+    <div id="left-nav">
+        <!--
+        time
+        day/night
+        location
+        main events..
+        pop stats
+        nature stats
+        geo stats
+
+        -->
+        <div id="simfo">
+            <p>time</p>
+            <p id="current_time"><span id="day_count"></span> </p>
+            <hr>
+            <p>sun</p>
+            <p id="day_time"></p>
+            <hr>
+            <p>Location Name</p>
+            <p id="current_location"></p>
+            <hr>
+            <p>Events</p>
+            <p id="current_event"></p>
+            <hr>
+            <p>Pop Stats:</p>
+            <p id="current_pop"></p>
+            <hr>
+            <p>Nature Stats:</p>
+            <hr>
+            <p>Geo Stats:</p>
+            <hr>
+
+        </div>
+        <div class="side-nav">
+            <nav>
+                <button>L S 1</button>
+                <button>L S 2</button>
+                <button>L S 3</button>
+            </nav>
+        </div>
+
+    </div>
+    <div id="right-nav">
+        <div class="side-nav">
+            <!--
+            <nav>
+                <button>R S 1</button>
+                <button>R S 2</button>
+                <button>R S 3</button>
+                <input type="range" value="1.6" min=".1" max="4">
+            </nav>
+            -->
+            <button>Switch Objects</button>
+            <p>item: <span id="item-name">mouu</span></p>
+            <p>health:  <span id="item-health">3</span></p>
+            <p>hunger:  <span id="item-hunger">4</span></p>
+            <p>thirst:  <span id="item-thirst">69</span></p>
+            <p>energy:  <span id="item-energy">69</span></p>
+            <p>happy:  <span id="item-happy">69</span></p>
+            <p>velocity: <span id="item-velocity">4</span></p>
+            <p>1/distance: <span id="item-closeness">4</span></p>
+            <p>target val: <span id="item-tval">4</span></p>
+            <p>target: <span id="item-target">4</span></p>
+            <p>action:  <span id="item-action">4</span></p>
+            <p>try action:  <span id="item-desired-action">4</span></p>
+            <p>in forest: <span id="item-inforest">4</span></p>
+            <p>in shelter: <span id="item-inshelter">4</span></p>
+            <p>in water: <span id="item-inwater">4</span></p>
+            <p>pos x: <span id="item-pnt-x">4</span></p>
+            <p>pos y: <span id="item-pnt-y">4</span></p>
+        </div>
+
+    </div>
+    <div id="bottom-nav">
+
+        <p style="color:red;" id="ObjectList"> test
+
+        </p>
+        <div class="item-cont">
+
+
+        </div>
+
+    </div>
+
+
+    <script src="main.js"></script>
+
+</body>
+</html>

@@ -266,7 +266,7 @@ class Forest{
         }
     }
 }
-
+//Lake = body_of_water ~ {lake, pond, pool}
 class Lake{
     constructor(){
         //name EX: Lake Titicaca
@@ -624,14 +624,14 @@ class Tile{
     constructor(i, n, gbg){
         this.i = i
         this.n = n // n = ?
-        this.grid = gbg
+        this.grid = gbg //gameboard
         this.neighbors = [i]
         this.objects = []
         this.includeNeighbors()
 
         var r = Math.floor(this.i/this.n)
         this.c_index = [this.i + r, this.i + r + 1, this.i + this.n + 1 + r, this.i + this.n + 2 + r] //TL, TR, BL, BR
-        this.corners = [this.grid.points[this.c_index[0]], this.grid.points[this.c_index[1]], this.grid.points[this.c_index[2]], this.grid.points[this.c_index[3]],]
+        this.corners = [this.grid.points[this.c_index[0]], this.grid.points[this.c_index[1]], this.grid.points[this.c_index[2]], this.grid.points[this.c_index[3]]]
         //console.log('tile number '+this.i+'')
         //console.log(this.c_index)
         //console.log(this.grid)
@@ -831,6 +831,24 @@ class Tile{
         //type = f(total corner soil stats)
 
     }
+    highlight(){
+
+        let reordered_pnts = [this.corners[0], this.corners[1], this.corners[3], this.corners[2]]
+
+        drawPolygon( reordered_pnts, 'blue', 'rgba(0,0,0,0)')
+
+    }
+    groupHighlight(){
+        //for self + 8 neighbors draw border
+        console.log('neighbors:',this.neighbors)
+        for (var i = 0; i < this.neighbors.length; i++){
+          let ti = this.neighbors[i]
+          console.log(ti)
+          this.grid.tiles[ti].highlight()
+          console.log(this.grid.tiles[ti])
+
+        }
+    }
 }
 
 //TODO: track objects on game board: when they move from tile to tile
@@ -866,7 +884,7 @@ class GameBoardGrid{
         let r = Math.floor(pnt.x/dx)
         let c = Math.floor(pnt.y/dy)
 
-        let ti = c + this.n*r
+        let ti = r + this.n*c
         //console.log(ti)
         return ti
     }
@@ -1300,7 +1318,7 @@ class Memory{
         //return y
     }
 }
-
+/*
 async function loadAnimalData(){
     const response = await fetch('assets/animals.json')
     if (!response.ok) {
@@ -1320,6 +1338,7 @@ async function loadFoodData(){
     //console.log(data["seeds"]["energy"])
     return data
 }
+*/
 //AnimalData = loadAnimalData()
 //FoodData = loadFoodData()
 
@@ -1329,8 +1348,33 @@ async function loadFoodData(){
 //Animal
 //TODO: Check all coefficients for all functions
 //      EX:  d_hunger/d_eating(max_food), d_energy/d_sleep(t)
+//      social
+/*
+    social categories : score = value_assesment(same_species)
+        model 1:
+        - solitary: [(no need to share), (minimal parenting), ()] , mountain lions
+        - pair-living: [(vulnrbale offspring), ()] , most birds
+        - communal: [(clumped resources), (mutual safety)]
+        - semisocail: [(shared labor), ]
+        - Primitively Eusocial:
+        - Advanced Eusocial
+        model 2:
+        - solitary: tiger, mountain-lion, orangutan, sloth [(sparse & uniform random resources), (concealment)
+        - pair-bond: jackal, antelope
+        - small-group: wolf, capybara
+        - big-group: hyena, wildebeest (clumped resources)
+        model 3:
+        - feed strategy -> carnivore:{assassinate, ambush}, herbivore:{forage, graze}
+        - concealment
+        - parenting
+
+    socaility ~ P(X), X={is_insect, is_bird, is_vulnerable
+
+    value_assesment(food)
+     - willingness to eat bad food = a*hunger
+*/
 class Animal{
-    constructor(name, type, position, size, mass, gb, gender){
+    constructor(name, type, position, size, mass, gb, gender, show_stats){
         console.log('this animal = ',name)
         console.log(AnimalData)
         this.gb = gb //gameboard
@@ -1341,9 +1385,11 @@ class Animal{
         this.mass = mass
         this.position = position
         this.gender = gender //gender = [M,F].. we live in a binary world... SMH
+        this.main_character = show_stats // true or false\]
 
-        this.hunger = 50 // value range : [100,0]
-        this.thirst = 100 //    [100,0]
+
+        this.hunger = 0 // value range : [-100,100]
+        this.thirst = 0 //    [-100,100]
         this.energy = 50 //    [-100,100]
         this.happy = 0 //       [-100,100]
 
@@ -1355,13 +1401,14 @@ class Animal{
         //this.memory_size = 4
         this.memory = new Memory()
         this.action = 0 // value = index of action_map
+        this.desired_action = 0
         this.action_set = ['sleep','drink', 'eat', 'sex', 'kill', 'die', 'run', 'swim', 'climb', 'capture', 'defend', 'speak', 'groom', 'rest']
         this.search_obj = 'Food'
         this.destination = this.position
         this.next_destination = this.gb.position
 
         this.target = null //pointer to target object
-        this.target_val = 0 // 1 = if in {sex,food}, -1 = death
+        this.target_val = 0 // 1 = sex/food, -1 = death
         this.d_2_target = null
         if (this.target == null){
             this.d_2_target = 100000
@@ -1375,12 +1422,17 @@ class Animal{
         this.inShelter = 0 // 1 = True
         this.constraint = 0 // measured as mass
         this.constrainer = null
-        this.weapon = null // cat, tiger, wolf, bear, eagle  :=> bone_knifes(size, mass),... ram, elk :=> bone_hammer(mass),... 
+        this.weapon = null // cat, tiger, wolf, bear  :=> bone_knifes(5),... ram, elk :=> bone_hammer,... eagle :=> bone_knives(3)
         //claws & teeth =~= bone_knives
         //quantify weapon?
         //      number of weapons * size
         //TODO: Search, include search in vector of actions, search = f(t_val = 0)
 
+    }
+    highlightArea(){
+        //highlight tile
+        let ti = this.gb.point2Tile(this.position)
+        this.gb.tiles[ti].groupHighlight()
     }
     /*
     compressMemory(){
@@ -1390,6 +1442,7 @@ class Animal{
     */
     valueAssess(obj){
             console.log('value assess()...')
+            //TODO if object is moving towards self -> threat_value = obj.velocity
             var t_val = 0
             let AnimalData = this.gb.animal_data
             //console.log(this.name)
@@ -1430,6 +1483,7 @@ class Animal{
                 }
             }
             if(obj.constructor.name == "Animal"){
+
                 //threat?
                 //TODO: change size to threat potential = f(size, weapons) EX: buffalo vs lion. buffalo.size > lion.size
                 if(AnimalData[obj.name]['diet'] == "Carnivore" && obj.size > this.size){
@@ -1468,6 +1522,10 @@ class Animal{
         console.log("perceive()")
         //alert('percieve')
         console.log('the tval =', this.target_val)
+        if(this.constraint > 0){
+            //todo : fix the value of d_happy
+            this.happy -= this.constraint/2
+        }
         //TODO
         //observe environment
         //      inForest? inWater? inSide? onObject? onTarget? envDensity?
@@ -1486,52 +1544,63 @@ class Animal{
 
         let ti = this.gb.point2Tile(this.position)
         let tile = this.gb.tiles[ti]
-
-        for (var i = 0; i < tile.objects.length; i++){
-            if(tile.objects[i] === this){
-                //check if dead
-                continue
-            }
-            console.log('other object found...')
-            //todo
-            //order objects
-            /*
-                1) Big objects: Forests, Lake, Hill,...
-                    inForest, inWater, onHill, inShelter(building, bush, cave, hole, tree)
-
-                2) Concealing objects: Boulder, Hole, Cave, Bush, Wall...
-                3) Plants
-                4) Animals
-                5) NPC
-            */
-            console.log('obj = ',tile.objects[i])
-            let obj = tile.objects[i]
-            var angle = toAngle(this.position, obj.position)
-            //1) Check if object is perceivable (not concealed)
-            //assess object type    : object type -> target val
-            let t_val = this.valueAssess(obj)
-            console.log('t_val =',t_val)
-            if (Math.abs(t_val) > Math.abs(this.target_val)){
-                this.target = obj
-                console.log('yes',this.target)
-                this.target_val = t_val
-                this.d_2_target = distance(this.position, this.target.position)
-            }
-            //inForest?
-            //if(obj type == ForestMarker){ if(distance(this.position, forest.position) <= forest.radius) { inForest = true} }
-            if(obj.constructor.name == "ForestMarker"){
-                if(distance(this.position, obj.forest.position) <= obj.forest.size/2){
-                    this.inForest = 1
-                    notInForest = false
+        let ti_list = tile.neighbors
+        for (var t = 0; t < ti_list.length; t++){
+            let ti = ti_list[t]
+            let tile = this.gb.tiles[ti]
+            for (var i = 0; i < tile.objects.length; i++){
+                if(tile.objects[i] === this){
+                    //check if dead
+                    continue
                 }
+                console.log('other object found...')
+                //todo
+                //order objects
+                /*
+                    1) Big objects: Forests, Lake, Hill,...
+                        inForest, inWater, onHill, inShelter(building, bush, cave, hole, tree)
+
+                    2) Concealing objects: Boulder, Hole, Cave, Bush, Wall...
+                    3) Plants
+                    4) Animals
+                    5) NPC
+                */
+                console.log('obj = ',tile.objects[i])
+                let obj = tile.objects[i]
+                var angle = toAngle(this.position, obj.position)
+                //1) Check if object is perceivable (not concealed)
+                //assess object type    : object type -> target val
+                let t_val = this.valueAssess(obj)
+                console.log('t_val =',t_val)
+                if (Math.abs(t_val) > Math.abs(this.target_val)){
+                    this.target = obj
+                    console.log('yes',this.target)
+                    this.target_val = t_val
+                    this.d_2_target = distance(this.position, this.target.position)
+                }
+                // TODO
+                /*
+                    TODO : objectInterface(self_obj, other_obj)
+                        - Ex: (animal, lake) -> {drink water, swim, drown}
+
+                */
+
+                //inForest?
+                //if(obj type == ForestMarker){ if(distance(this.position, forest.position) <= forest.radius) { inForest = true} }
+                if(obj.constructor.name == "ForestMarker"){
+                    if(distance(this.position, obj.forest.position) <= obj.forest.size/2){
+                        this.inForest = 1
+                        notInForest = false
+                    }
+                }
+                //inBuilding?
+                //inVehicle
+                //inWater
+
+                //if(obj type == ForestMarker){ if(distance(this.position, forest.position) <= forest.radius) { inForest = true} }
+
+                //create surround map = [N, NE, E, SE, S, SW, W, NW, Top, Bottom]
             }
-            //inBuilding?
-            //inVehicle
-            //inWater
-
-            //if(obj type == ForestMarker){ if(distance(this.position, forest.position) <= forest.radius) { inForest = true} }
-
-            //create surround map = [N, NE, E, SE, S, SW, W, NW, Top, Bottom]
         }
         //for objects in cell & adjacent cells: evaluate object
         if(notInForest){
@@ -1548,52 +1617,59 @@ class Animal{
     acting(){
         //this.action_set = ['sleep','drink', 'eat', 'sex', 'kill', 'die', 'run', 'swim', 'climb', 'capture', 'defend', 'speak', 'groom', 'rest']
 
-        if(this.action == 0){
+        if(this.desired_action == 0){
             this.sleep()
         }
-        if(this.action == 1){
+        if(this.desired_action == 1){
             this.drink()
         }
-        if(this.action == 2){
+        if(this.desired_action == 2){
             this.eat()
         }
-        if(this.action == 3){
+        if(this.desired_action == 3){
             this.sex()
         }
-        if(this.action == 4){
+        if(this.desired_action == 4){
             this.kill()
         }
-        if(this.action == 5){
+        if(this.desired_action == 5){
             this.die()
         }
-        if(this.action == 6){
+        if(this.desired_action == 6){
             this.run()
         }
-        if(this.action == 7){
+        if(this.desired_action == 7){
             this.swim()
         }
-        if(this.action == 8){
+        if(this.desired_action == 8){
             this.climb()
         }
-        if(this.action == 9){
+        if(this.desired_action == 9){
             this.capture()
         }
-        if(this.action == 10){
+        if(this.desired_action == 10){
             this.defend()
         }
-        if(this.action == 11){
+        if(this.desired_action == 11){
             this.speak()
         }
-        if(this.action == 12){
+        if(this.desired_action == 12){
             this.groom()
         }
-        if(this.action == 13){
+        if(this.desired_action == 13){
             this.rest()
         }
+
 
     }
     act(){
         console.log('the tv', this.target_val)
+
+        if (this.energy < -50){
+            this.sleeping()
+            return
+        }
+
         //alert('act()')
         //percieve every k iterations, k = f(reaction time)
         this.perceive()
@@ -1609,18 +1685,13 @@ class Animal{
         //env_gradient = (dx, dy)
         //env_target = (p1, p2)
         var X = [this.health, this.hunger, this.thirst, this.energy, this.happy, this.velocity_norm]
-        // Stats {health, hunger, thirst, fatigue, happy, velocity}
-        // Env [d_2_target, target_score, slope, this.inWater, this.inForest, this.inVehicle]
-        let closeness = 1/(this.d_2_target + .01)
+        //let closeness = 200/Math.sqrt(this.d_2_target + 1) - 30
+
+        let closeness = 100/(this.d_2_target + .01) // ~ (3,20)
+        //alert(closeness)
         var Env = [closeness, this.target_val, this.inForest, this.inShelter, this.inWater]
 
-        // X = Concat(Stats, Env, action_one_hot_vec)
-        //TODO: one_hot_vector
         var Y_0 = OneHotArray(this.action, this.action_set.length)
-        //console.log('1: ',this.action)
-        //console.log("2: ",this.action_set.length)
-        //console.log('y0: ',Y_0)
-
 
         X = X.concat(Env, Y_0) // X = [X, Env, Y_0 = y_(t-1)]
         X = math.matrix(X)
@@ -1634,18 +1705,12 @@ class Animal{
         console.log(Y.valueOf()[0])
 
         let i = indexOfMax(Y.valueOf()[0])
-        this.action = i
+        this.desired_action = i
         console.log('indx: ',this.action)
         this.acting()
         //alert(this.action_set[i])
         //y = ComputeModel(X)
-        //TODO:
-        /*
-                TODO
-                    -> convert X: array -> Vector
-                    -> Y = W * X
-                    -> action = arg_max(Y)
-        */
+
         //Return action <- y
         //y:
         //function = ActionMap(function name : function)
@@ -1658,6 +1723,8 @@ class Animal{
         //output animal sound from json animal data
         sound = AnimalData[this.type]['sound']
         this.action = 11 //speak
+        // create sound object
+        // if animal (same species) is in distance of sound object, it creates memory of there position
     }
     groom(){
         this.happy += 1
@@ -1671,47 +1738,53 @@ class Animal{
         this.action = 13 //rest
     }
     sleeping(){
+        this.velocity.x = 0
+        this.velocity.y = 0
         this.action = 0 //sleep
         //energy increase by rate
-        this.energy += 10
+        this.energy += .1
         //increase happy
-        this.happy += 1
+        this.happy += .01
         //increase health
-        this.health += 1
+        this.health += .1
     }
     sleep(){
         //if tval = -90 & d2target = close, -> energy += 1, -> defend()
+
         this.search_obj = "Shelter"
         if (this.target_val < -10 & this.d_2_target < 5*this.size){
             this.energy += 1
             this.defend()
             return
         }
-
-        if (this.target.name == AnimalData[this.type]['shelter']){
-            if(this.d_2_target > 10*this.size){
-                this.run()
-            }
-            else{
-                //sleep
-                this.position = this.target.position
-                this.sleeping()
+        if (this.target != null){
+            if (this.target.name == AnimalData[this.type]['shelter']){
+                if(this.d_2_target > 5*this.size){
+                    this.run()
+                    return
+                }
+                else{
+                    //sleep
+                    this.position = this.target.position
+                    this.sleeping()
+                    return
+                }
             }
         }
-        else{
-            if(this.energy < 5){
-                this.sleeping()
-                return
-            }
-            //default shelter = forest
-            //  forest -> tree = shelter
-            //          -> bush = shelter
-            //          -> dig hole = shelter
 
-            //if no shelter ->search(shelter)
-            this.search()
-            this.run()
+        if(this.energy < 0){
+            this.sleeping()
+            return
         }
+        //default shelter = forest
+        //  forest -> tree = shelter
+        //          -> bush = shelter
+        //          -> dig hole = shelter
+
+        //if no shelter ->search(shelter)
+        this.search()
+        this.run()
+
 
     }
     drink(){
@@ -1729,6 +1802,7 @@ class Animal{
                 this.position = this.target.position
                 this.thirst -= 20 //TODO: limit the intake to quanity of water
                 this.happy += 1
+                //todo: create memory
             }
         }
         else{
@@ -1739,15 +1813,16 @@ class Animal{
     eating(){
         this.action = 2 //eat
         //eat
+        max_bite_size = this.size/36
         //TODO: change,check scalar for all this.vars
         // size_of_food * hunger_pnts(protein)
         //nutrients: [water, salt, vitamin, protein]
         let scalar = 1 // f(size_of_obj, hunger_range, protein)
         //protein = nutrients[3]
         //hunger_change = {full meal : 70, bite: 5
-        this.hunger -= Math.min(this.size/5, this.target.size) * FoodData[this.target.name]["nutrients"][3] * scalar
+        this.hunger -= Math.min(max_bite_size, this.target.size) * FoodData[this.target.name]["nutrients"][3] * scalar
         //thirst_change = salt - water
-        this.thirst -= Math.min(this.size/5, this.target.size) * FoodData[this.target.name]["nutrients"][0] * scalar/10 - FoodData[this.target.name]["nutrients"][1]*2
+        this.thirst -= Math.min(max_bite_size, this.target.size) * FoodData[this.target.name]["nutrients"][0] * scalar/10 - FoodData[this.target.name]["nutrients"][1]*2
         //health = 3 * salt +
         this.health += FoodData[this.target.name]["nutrients"][1]*3 + FoodData[this.target.name]["nutrients"][2]*2
         //energy = 6 * salt +
@@ -1755,6 +1830,8 @@ class Animal{
         //happiness
         this.happy += (FoodData[this.target.name]["nutrients"][1]*6 + FoodData[this.target.name]["nutrients"][2])
         //this.mass += Math.min(this.size/5, this.target.size)*
+
+        //TODO: create memory
     }
     eat(){
         //if success{
@@ -1814,15 +1891,10 @@ class Animal{
 
     }
     sex(){
-        
         //find opposite gender
         //target = same type animal AND opposite gender
-        // if target exists
-        //requirements are low fear of other & self
-        //if fear high -> talk() *note* talk() =/= speak()
-        // talk() { create senteces given context of situation }
+
         //if success
-        
         //happy increase
         //energy decrease
         // chance of offspring
@@ -1847,8 +1919,7 @@ class Animal{
                 else{
                     this.action = 3 //sex
                     // ;)
-                    //auto sex or wait?
-                    // -> auto
+                    //TODO: test auto sex, then change to capture + attempt
                     //randomly generate offspring
                     //name, type, position, size, mass, gb, gender
                     //TODO randomly 50/50 chose gender
@@ -1856,6 +1927,9 @@ class Animal{
                     let ti = this.gb.point2Tile(this.position)
                     let tile_objs = this.gb.tiles[ti].objects
                     tile_objs.push(offspring)
+                    // TODO: check if successful: distance = 0 & both animals.action = 3
+                    this.energy -= 30
+                    this.hunger += 20
                 }
                 return
             }
@@ -1889,16 +1963,21 @@ class Animal{
 
         //if success -> health = 0
     }
+    reset_destination(){
+        this.destination.x = 0.6*this.position.x + 0.4*this.gb.W
+        this.destination.y = 0.6*this.position.y + 0.4*this.gb.H
+    }
     //TODO: redo this function
     //  remove reduncadancy
     //  improve clarity
     run(){
         //alert('run()')
+        this.highlightArea()
         this.action = 6 //run
         let ang = 0
         console.log('d2target = ',this.d_2_target)
         console.log('the target = ',this.target)
-        if (this.target_val > 0 && this.d_2_target < 2*this.size){
+        if (this.target_val > 20 && this.d_2_target < 2*this.size){
             //assume no constraint effecting this.velocity
             this.capture()
         }
@@ -1932,11 +2011,13 @@ class Animal{
             //this.constraint <- constrain vnorm
             this.velocity_norm = vnorm*this.max_v
             //this.velocity_norm -= 4*(this.constraint + .01)/this.mass //TODO fix this
-            let constrain_p = 1/(1+Math.exp(.2*(this.constraint-.25*this.mass)))
-            this.velocity_norm = this.velocity_norm * (constrain_p + .03)
+
+            let constrain_p = Math.exp(-1*(0.2 + (this.constraint/this.mass)))
+            this.velocity_norm = this.velocity_norm * constrain_p
             /*
                 TODO: Fix bug: single constraint,
                     need multiple constraints. EX: multiple lions on a giraffe
+                    energy -= constaint
             */
 
             //min speed = .1
@@ -1946,8 +2027,35 @@ class Animal{
             }
             this.velocity.x = this.velocity_norm*Math.cos(ang)
             this.velocity.y = this.velocity_norm*Math.sin(ang)
-            this.position.x -= this.velocity.x
-            this.position.y -= this.velocity.y
+            //bounce off edge -> TODO: in future move to other map
+            let new_x = this.position.x - this.velocity.x
+            let new_y = this.position.y - this.velocity.y
+            if (new_x <= 0 || new_x >= this.gb.W){
+                this.velocity.x = this.velocity.x * -0.9
+                this.reset_destination()
+                if (new_x <= 0){
+                    new_x = 2*this.size
+                }
+                if (new_x >= this.gb.W){
+                    new_x = this.gb.W - 2*this.size
+                }
+            }
+
+            if (new_y <= 0 || new_y >= this.gb.H){
+                this.reset_destination()
+                this.velocity.y = this.velocity.y * -0.9
+                if (new_y <= 0){
+                    new_y = 2*this.size
+                }
+                if (new_y >= this.gb.H){
+                     new_y = this.gb.H - 2*this.size
+                }
+            }
+
+            this.position.x = new_x
+            this.position.y = new_y
+
+
             //todo *keep position in board
             //energy decrease
             this.energy -= .001*this.velocity_norm
@@ -2003,7 +2111,11 @@ class Animal{
         //
     }
     capture(){
-        if(this.target == null){return}
+        if(this.target == null){
+            this.search()
+            this.run()
+            return
+        }
         this.action = 9 //capture
         //to grab, hold, trap, arrest, tie-up
         //add constraining force to target
@@ -2040,7 +2152,6 @@ class Animal{
         return Math.sqrt(v_x**2 + v_y**2)
     }
     search(){
-        //alert('search')
         console.log('searching...')
         /*
         Memory("Water") : Point(x,y)
@@ -2083,6 +2194,7 @@ class Animal{
                 let px = this.position.x/W
                 let py = this.position.y/H
                 let b = .15
+                //let b = .1
                 let fx = b*px - b/2
                 let fy = b*py - b/2
                 let dy = 0
@@ -2139,6 +2251,10 @@ class Animal{
 
     }
     update(){
+        if (this.health < -100){
+            console.log('bug detected: object should be dead')
+            return
+        }
         this.act()
         /*
         check if all vars withing min,max range
@@ -2148,85 +2264,103 @@ class Animal{
             - decrease hunger
             - decrease energy
         */
-        this.hunger += .1
-        this.thirst += .1
+        this.hunger += .01
+        this.thirst += .001
         this.energy -= .001
-        if (this.energy <30){
-            this.hunger += 1
-            this.thirst += 1
+        if (this.energy <0){
+            this.hunger += .03
+            this.thirst += .03
+            this.happy -= .01
         }
-        /*
-        if (this.hunger > 100){
-            this.energy -= 1
-        }
-        */
+        //thirst
         if (this.thirst < -100){
-            //this.health -= 1
-        }
-        if (this.hunger < -100){
-            //this.hunger -= 1
-        }
+            this.thirst = -100
 
+        }
+        if (this.thirst > 100){
+            this.thirst = 100
+            //this.energy -= 1
+        }
+        //hunger
+        if (this.hunger < -100){
+            this.hunger = -100
+        }
+        if (this.hunger > 100){
+            this.hunger = 100
+            this.happy -= .1
+
+        }
+        //energy
         if (this.energy < -100){
+            this.energy = -100
             this.health -= 1
         }
+        if (this.energy > 100){
+            this.energy = 100
+        }
+        //happy
+        if (this.happy < -100){
+            this.happy = -100
+        }
+        if (this.happy > 100){
+            this.happy = 100
+        }
+        //TODO cap all vars to bounds
+        //let hunger, thirst, energy, happy ~ (-100,100)
 
+        //let
         //this.hunger -= b
         //this.thirst -= b
         //this.fatigue -= b* this.velocity_magnitude
         //this.position += velocity
         //TODO UpdateUI(this)
+        if (this.main_character){
+            let html_element = document.getElementById('item-name')
+            html_element.innerHTML = this.name
+            //console.log('element', html_element)
+            //
+            html_element = document.getElementById('item-energy')
+            html_element.innerHTML = Math.round(this.energy)
 
-        let html_element = document.getElementById('item-name')
-        html_element.innerHTML = this.name
-        //console.log('element', html_element)
-        //
-        html_element = document.getElementById('item-energy')
-        html_element.innerHTML = Math.round(this.energy)
+            html_element = document.getElementById('item-health')
+            html_element.innerHTML = Math.round(this.health)
 
-        html_element = document.getElementById('item-health')
-        html_element.innerHTML = Math.round(this.health)
+            html_element = document.getElementById('item-hunger')
+            html_element.innerHTML = Math.round(this.hunger)
 
-        html_element = document.getElementById('item-hunger')
-        html_element.innerHTML = Math.round(this.hunger)
+            html_element = document.getElementById('item-action')
+            html_element.innerHTML = (this.action_set[this.action])
 
-        html_element = document.getElementById('item-action')
-        html_element.innerHTML = (this.action_set[this.action])
+            html_element = document.getElementById('item-desired-action')
+            html_element.innerHTML = (this.action_set[this.desired_action])
 
-        html_element = document.getElementById('item-happy')
-        html_element.innerHTML = Math.round(this.happy)
-        html_element = document.getElementById('item-thirst')
-        html_element.innerHTML = Math.round(this.thirst)
-        html_element = document.getElementById('item-velocity')
-        html_element.innerHTML = round(this.velocity_norm,3)
-        html_element = document.getElementById('item-closeness')
-        html_element.innerHTML = round(1/(this.d_2_target +.01), 3)
-        html_element = document.getElementById('item-tval')
-        html_element.innerHTML = Math.round(this.target_val)
-        html_element = document.getElementById('item-target')
-        html_element.innerHTML = Math.round(this.target)
-        html_element = document.getElementById('item-inforest')
-        html_element.innerHTML = Math.round(this.inForest)
-        html_element = document.getElementById('item-inwater')
-        html_element.innerHTML = Math.round(this.inWater)
-        html_element = document.getElementById('item-inshelter')
-        html_element.innerHTML = Math.round(this.inShelter)
+            html_element = document.getElementById('item-happy')
+            html_element.innerHTML = Math.round(this.happy)
+            html_element = document.getElementById('item-thirst')
+            html_element.innerHTML = Math.round(this.thirst)
+            html_element = document.getElementById('item-velocity')
+            html_element.innerHTML = round(this.velocity_norm,3)
+            html_element = document.getElementById('item-closeness')
+            //html_element.innerHTML = Math.round(200/Math.sqrt(this.d_2_target + 1) - 30, 3) //100/(this.d_2_target + .01)
+            html_element.innerHTML = Math.round(100/(this.d_2_target + .01), 3)
+            html_element = document.getElementById('item-tval')
+            html_element.innerHTML = Math.round(this.target_val)
+            html_element = document.getElementById('item-target')
+            html_element.innerHTML = Math.round(this.target)
+            html_element = document.getElementById('item-inforest')
+            html_element.innerHTML = Math.round(this.inForest)
+            html_element = document.getElementById('item-inwater')
+            html_element.innerHTML = Math.round(this.inWater)
+            html_element = document.getElementById('item-inshelter')
+            html_element.innerHTML = Math.round(this.inShelter)
 
+            html_element = document.getElementById('item-pnt-x')
+            html_element.innerHTML = Math.round(this.position.x)
+            html_element = document.getElementById('item-pnt-y')
+            html_element.innerHTML = Math.round(this.position.y)
 
-        let ti = this.gb.point2Tile(this.position)
-        let tile = this.gb.tiles[ti]
-
-        for (var i = 0; i < tile.objects.length; i++){
-            if(tile.objects[i] === this){
-                if(this.health <= 0){
-                    //dead
-                    this.health -= 1
-                }
-                if(this.health < -99){
-                    tile.objects.splice(i,1)
-                }
-            }
         }
+
     }
     draw(){
         drawCircle(this.position, 2, "red", "red")
@@ -2430,11 +2564,51 @@ class Nation{
 }
 
 
+/*
+Relationship Network - double linked matrix
+    r = 0 : Unknown individual
+    r < 0 : dislike (enemy)
+    r > 0 : like (friend)
+    each interaction r increase by a
+        each poistive transaction
 
+    each favor r increase by b > a, b = f(favor difficulty/cost, outcome quality)
+*/
 
 //King NPC
 /*
     observes nation vars -> changes gov_investment
+
+    observe nation -> determine changes in laws
+*/
+
+/*
+
+NPC - Level 1 | freq = 55%
+    - red vs blue (fixed constant)
+    - drunk vs zealot
+
+NPC - Level 2 | freq = 35%
+    - 4 quadrant political compass, {echo chamber attractor, bad outcome/observation repeller}
+        -> changing self beleifs/narrative: must be a slow dance pulling self over
+            *else: reject contrary ideas
+
+NPC - Level 3 | freq = 10$
+ animal vars:
+    - strength
+    - hunger
+    - endurance
+
+ 5 psych vars:
+    - introvert/extrovert <- avoid other humans, socialize with self vs others
+    - openminded <- beleifs/narative update, dismissal of contrary ideas
+    - agreeableness <- polite, copycat/mirror vs defensive/antagonist
+    - chaotic/stable <- random vs consistent, predictable
+    - paranoid <- la la la la la vs everything is a casual web and there exists more than we perceive
+
+ Human traits:
+    - wisdom
+    - charisma
 
 */
 
