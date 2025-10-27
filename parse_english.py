@@ -136,9 +136,9 @@ ADJ = {"big","small","red","blue","green","old","young","happy","fast","slow","d
 ADV = {"peacefully","quickly","slowly","quietly","loudly","well","badly","recently","already","soon","now","then","here","there", "that"}
 
 # small verb lexicon; if word not present we'll accept it heuristically as a verb when parsing VP
-VERBS = {"walked","eat","eats","ate","run","runs","ran","chase","chased","see","saw","think","thinks","said","say","says","be","am","is","are","have","has","make","made","go","went","sleep","slept","work","works","study","studies","know","knows","like","likes"}#left
-
-
+VERBS = {"continued","play","walked","eat","eats","ate","run","runs","ran","chase","chased","see","saw","think","thinks","said","say","says","be","am","is","are","have","has","make","made","go","went","sleep","slept","work","works","study","studies","know","knows","like","likes"}#left
+PUNCS = {",", ".", "?", "!"}
+FIRST_NAMES = {"john", "marry"}
 # --- Tokenizer / scanner ---
 class TokenStream:
     def __init__(self, text: str):
@@ -173,6 +173,7 @@ class RDParser:
         self.ts = TokenStream(text)
         # store last token convenient reference but we primarily use self.ts.peek / next
         self.result = self.parseS()
+        self.height = 0
 
     # Helper tests
     def is_pn(self, tok): return tok in PN
@@ -183,7 +184,9 @@ class RDParser:
     def is_aux(self, tok): return tok in AUX
     def is_adv(self, tok): return tok in ADV
     def is_adj(self, tok): return tok in ADJ
-    def is_verb(self, tok): return tok in VERBS or tok is not None and tok.endswith("s") and tok[:-1] in VERBS
+    def is_verb(self, tok): return tok in VERBS or tok is not None and tok.endswith("s") and tok[:-1] in VERBS or tok is not None and tok.endswith("ing") and tok[:-3] in VERBS
+    def is_punc(self, tok): return tok in PUNCS
+    def is_name(self, tok): return tok in FIRST_NAMES
 
     # --- Implement PRED ---
     def parsePRED(self):
@@ -197,24 +200,21 @@ class RDParser:
             verb_words.append(self.ts.next())
 
         if self.ts.peek() and (self.is_verb(self.ts.peek()) or not self.is_dt(self.ts.peek())):
-            verb_words.append(self.ts.next())
+            while self.ts.peek() and (self.is_verb(self.ts.peek()) or not(self.is_dt(self.ts.peek()) or self.is_conj(self.ts.peek()) or self.is_pn(self.ts.peek()) or self.is_prep(self.ts.peek()) or self.is_adj(self.ts.peek()) or self.is_adv(self.ts.peek()) )):
+                verb_words.append(self.ts.next())
         else:
-            print('the weird condition failed',self.ts.peek())
             return None
 
         obj = None
         adv_post = None
         if self.ts.peek() and (
                 self.is_dt(self.ts.peek()) or self.is_adj(self.ts.peek()) or not self.is_prep(self.ts.peek())):
-            if (self.is_dt(self.ts.future()) or self.is_pn(self.ts.future())) and self.is_adv(self.ts.peek()): #TODO - expand to is_noun()
+            if (self.is_dt(self.ts.future()) or self.is_pn(self.ts.future()) or self.is_name(self.ts.future())) and (self.is_adv(self.ts.peek()) or self.is_adj(self.ts.peek())): #TODO - expand to is_noun()
                 adv_post = self.ts.next()
-                #parseClause()
-                print('checking:',self.ts.peek(),self.ts.future())
-                obj = self.parseS()
+                obj = self.parseClause()
             else:
                 obj = self.parseOBJ()
-        #TODO
-        # - found the bug: check if ts.future() is dt and ts.peak() is adv
+
         pps = []
         while self.ts.peek() and self.is_prep(self.ts.peek()):
             pp = self.parsePP()
@@ -226,18 +226,16 @@ class RDParser:
 
         if self.ts.peek() and self.is_adv(self.ts.peek()):
             adv_post = self.ts.next()
-            print('hopefully not this line!!!')
         if self.ts.peek() and (
                 self.is_dt(self.ts.peek()) or self.is_adj(self.ts.peek()) or not self.is_prep(self.ts.peek())):
             if self.is_dt(self.ts.future()) and self.is_adv(self.ts.peek()):
-                print('is this the problem?')
                 pass
             else:
                 obj = self.parseOBJ()
         cp = None
         if self.ts.peek() and self.is_conj(self.ts.peek()):
             conj = self.ts.next()
-            s2 = self.parseS()
+            s2 = self.parseClause()
             if s2:
                 cp = CP(conj, s2)
 
@@ -278,22 +276,52 @@ class RDParser:
         return OBJ(det, adjs, noun, pp, conj_np, vp)
 
     # S -> NP VP (CP)?
+    def parseClause(self):
+        if self.ts.eof():
+            return None
+        sub_conj = None
+        if self.ts.peek() in CONJ:
+            sub_conj = CP(self.ts.next(), self.parseClause())
+        subj = self.parseNP()
+
+        if subj is None:
+            # can't find NP — attempt to recover: if sentence starts with 'that'/'who' etc treat as AP/CP
+            return None
+
+        pred = self.parsePRED()
+        if pred is None:
+            return None
+        # optional CP (conjunction introducing clause)
+        cp = None
+        nxt = self.ts.peek()
+        if nxt and self.is_conj(nxt):
+            """
+            conj = self.ts.next()
+            s2 = self.parseS()
+            if s2:
+                cp = CP(conj, s2)
+             """
+            cp = self.parseCP()
+        return Sentence(subj, pred, cp, sub_conj)
+
     def parseS(self) -> Optional[Sentence]:
         if self.ts.eof():
             return None
         sub_conj = None
         if self.ts.peek() in CONJ:
-            sub_conj = CP(self.ts.next(), self.parseS())
+            sub_conj = CP(self.ts.next(), self.parseClause())
         subj = self.parseNP()
+
         if subj is None:
             # can't find NP — attempt to recover: if sentence starts with 'that'/'who' etc treat as AP/CP
-            print('no subject',self.ts.peek())
-            return None
+
+            return sub_conj
+
 
         pred = self.parsePRED()
         if pred is None:
-            print('no pred, but subj: ',subj)
-            return None
+            return subj
+            #print('no pred')
         # optional CP (conjunction introducing clause)
         cp = None
         nxt = self.ts.peek()
@@ -309,13 +337,18 @@ class RDParser:
 
     # NP -> (dt) (AdjP) noun (PP) (conj NP)
     def parseNP(self) -> Optional[NP]:
+        #TODO
+        # - check set of names
+        # - check set of food items
+        # - check set of materials
+        # - combine all ^ into known_nouns
         nxt = self.ts.peek()
         det = None
         noun = None
         if nxt and self.is_dt(nxt):
             det = self.ts.next()
             nxt = self.ts.peek()
-        if nxt and self.is_pn(nxt):
+        if nxt and self.is_pn(nxt) or self.is_name(nxt):
             noun = self.ts.next()
             nxt = self.ts.peek()
             if nxt and self.is_conj(nxt):
@@ -456,7 +489,7 @@ class RDParser:
         # Lookahead: ensure what follows looks like a sentence start
         if self.ts.peek() is None:
             return None
-        s = self.parseS()
+        s = self.parseClause()
         if s is None:
             return None
         return CP(conj, s)
@@ -494,6 +527,7 @@ class RDParser:
             if node.conj_np:
                 print(pad + "  ConjNP:")
                 self.pretty_print(node.conj_np, indent+2)
+
         elif isinstance(node, VP):
             print(pad + f"VP: verb={' '.join(node.verb)}, adv={node.adv}")
             if node.obj:
@@ -536,6 +570,8 @@ class RDParser:
             if node.conj_np:
                 print(pad + "  ConjNP:")
                 self.pretty_print(node.conj_np, indent + 2)
+            if node.vp:
+                self.pretty_print(node.vp, indent + 2)
         else:
             print(pad + repr(node))
 
@@ -556,6 +592,7 @@ if __name__ == "__main__":
         "They quickly ate the delicious bread in the morning",
         "The king is dead and it is sad"   # edge-case (CP as subject) — parser expects NP first; may not parse
     ]
+    examples = ["John gave Mary a book"]
     # -> tobe_state -> tobe Adj
 
     for sent in examples:
@@ -566,3 +603,5 @@ if __name__ == "__main__":
             print("Parse failed or partial parse.")
         else:
             p.pretty_print()
+
+
